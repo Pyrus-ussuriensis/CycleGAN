@@ -5,6 +5,9 @@ from PIL import Image
 from pathlib import Path
 import torch, random
 from torchvision import transforms
+from pathlib import Path
+
+
 
 def make_transform(size=256):
     return transforms.Compose([
@@ -29,10 +32,11 @@ class Monet(Dataset):
         return self.tfm(a), self.tfm(b)
 
 class Monet2PhotoDM(L.LightningDataModule):
-    def __init__(self, data_dir: str="data/monet2photo",
+    def __init__(self, data_dir="data/monet2photo", out_dir="results",
                  batch_size: int=1, size: int=256, num_workers: int=4):
         super().__init__()
-        self.data_dir = Path(data_dir)
+        self.data_dir = Path(data_dir).expanduser().resolve()
+        self.out_dir  = Path(out_dir).expanduser().resolve()
         self.batch_size = batch_size
         self.size = size
         self.num_workers = num_workers

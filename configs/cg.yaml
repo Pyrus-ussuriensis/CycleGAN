@@ -1,20 +1,27 @@
 model:
-  lr: 0.0002
-  lambda_cyc: 10
+    G:
+      class_path: cg.models.Generator
+    F:
+      class_path: cg.models.Generator
+    Dx:
+      class_path: cg.models.Discriminator
+    Dy:
+      class_path: cg.models.Discriminator
 
 data:
-  root: ./data/monet2photo
+  root: data/monet2photo
   size: 256
   batch_size: 1
 
-trainer:
-  max_epochs: 200
-  accelerator: gpu
-  devices: 1
-  precision: 16-mixed
-  callbacks:
-    - class_path: lightning.pytorch.callbacks.EarlyStopping
-      init_args: {monitor: val/fid, patience: 5}
-  logger:
-    class_path: lightning.pytorch.loggers.TensorBoardLogger
-    init_args: {save_dir: logs, name: cg}
+fit:
+    trainer:
+        max_epochs: 200
+        accelerator: gpu
+        devices: 1
+        precision: 16-mixed
+        callbacks:
+          - class_path: lightning.pytorch.callbacks.EarlyStopping
+            init_args: {monitor: val/fid, patience: 5}
+        logger:
+          class_path: lightning.pytorch.loggers.TensorBoardLogger
+          init_args: {save_dir: logs, name: cg}

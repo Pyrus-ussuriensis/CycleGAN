@@ -1,0 +1,13 @@
+LICENSE
+README.md
+pyproject.toml
+src/cg/CycleGAN.py
+src/cg/main.py
+src/cg.egg-info/PKG-INFO
+src/cg.egg-info/SOURCES.txt
+src/cg.egg-info/dependency_links.txt
+src/cg.egg-info/requires.txt
+src/cg.egg-info/top_level.txt
+src/cg/data/monet2photo.py
+src/cg/models/Discriminator.py
+src/cg/models/Generator.py

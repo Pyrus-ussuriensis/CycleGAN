@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cg"           # 分发名（pip 安装用）
+version = "0.1.0"
+requires-python = ">=3.9"
+description = "CycleGAN with Lightning"
+readme = "README.md"
+dependencies = ["torch>=2.1", "lightning>=2.2", "torchvision"]
+
+[tool.setuptools.packages.find]
+where = ["src"]             # 告诉 setuptools 在 src 下找包

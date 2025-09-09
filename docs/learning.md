@@ -33,6 +33,12 @@ lightning会自动将数据转移到正确的设备，除非是自定义的数�
       * gelu(x, approx)
       * silu(x, inplace)
       * hardtanh(x,…) 
+      * l1_loss（MAE）reduction={'none','mean','sum'}。更抗离群点
+      * mse_loss（L2/平方误差）同样支持 reduction；梯度在误差大时更大。 
+      * huber_loss（L1 与 L2 的折中）关键参：delta（阈值）；小误差用 L2，大误差转 L1，稳定又平滑。delta=1 近似 SmoothL1。
+      * smooth_l1_loss（检测里常见，β=1 默认）关键参：beta。小于 β 用 L2，否则 L1。
+      * cross_entropy（多类，输入=logits）参：weight（类权重）、ignore_index、label_smoothing、reduction。等价 LogSoftmax + NLLLoss。
+      * binary_cross_entropy_with_logits（二分类/多标签）参：pos_weight（正例加权）、weight、reduction；把 Sigmoid 与 BCE 合成以提升数值稳定性。
     * 非线性
     * ReLU(inplace=False)：inplace=True 可降内存但会就地改写输入。
     * LeakyReLU(negative_slope=0.01, inplace=False)
@@ -57,7 +63,10 @@ lightning会自动将数据转移到正确的设备，除非是自定义的数�
     * Linear(in_features, out_features, bias=True)；函数式：F.linear(x, W, b)
     * 上采样，插值
     * Upsample(size=None, scale_factor=None, mode='nearest'|'bilinear'|'bicubic'|..., align_corners=None)（模块化封装）
-        * CrossEntropyLoss(weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0)（多类，输入为 logits；内部含 LogSoftmax+NLLLoss）
+    * 损失函数
+    * CrossEntropyLoss(weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0)（多类，输入为 logits；内部含 LogSoftmax+NLLLoss）
+    * BCEWithLogitsLoss（二分类/多标签，输入=logits）将 Sigmoid 与 BCE 合并，数值更稳定；参：pos_weight（正例加权）、weight、reduction。优于“Sigmoid+BCELoss”的裸拼。
+    * 
     * 激活函数
     * Tanh()  
     * ReLU(inplace=…) 
@@ -72,6 +81,13 @@ lightning会自动将数据转移到正确的设备，除非是自定义的数�
   * optim
     * sgd(params, lr=0.001, momentum=0, dampening=0, weight_decay=0, nesterov=false, , maximize=false, foreach=none, differentiable=false, fused=none)
     * adam(params, lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=0, amsgrad=false, , foreach=none, fused=none)
+    * lr_scheduler
+      * StepLR(optimizer, step_size, gamma=0.1) 每过 step_size 个 epoch，把 LR 乘以 gamma。适合简单的分段阶梯衰减。调用：每个 epoch 结束 scheduler.step()
+      * MultiStepLR(optimizer, milestones, gamma=0.1) 在 milestones 指定的 epoch 点（如 [30, 60, 90]）把 LR 乘以 gamma。比 StepLR 更可控。
+      * ExponentialLR(optimizer, gamma) 每个 epoch 让 LR 乘以 gamma（指数衰减）。
+      * CosineAnnealingLR(optimizer, T_max, eta_min=0.0) 在 T_max 个 epoch 内从初始 LR 余弦下降到 eta_min。经典 cosine 退火。
+      * CosineAnnealingWarmRestarts(optimizer, T_0, T_mult=1, eta_min=0.0) 余弦退火 + 周期性重启（SGDR）。每 T_i 个 epoch 重启到峰值；T_mult 控制每次周期是否变长。
+      * 
   * utils
     * data
     * DataLoader(dataset, batch_size=1, shuffle=False, sampler=None, num_workers=0, collate_fn=None, pin_memory=False, drop_last=False, persistent_workers=False, timeout=0, ...)   
@@ -100,3 +116,35 @@ lightning会自动将数据转移到正确的设备，除非是自定义的数�
     * nms(boxes, scores, iou_threshold) -> idxs：标准 NMS；boxes 形如 [N,4]、格式 xyxy。
     * batched_nms(boxes, scores, idxs, iou_threshold)：按 idxs（通常类别 id）分组的 NMS。
     * roi_align(input[N,C,H,W], boxes, output_size, spatial_scale=1.0, sampling_ratio=-1, aligned=False)：RoI Align（Mask R-CNN 同款，默认平均池化）。
+
+## LightningModule
+在优化器方面其提供了使用多个优化器以及调度器的方法，对每个运行一遍流程，我们可以用optimizer_idx来区别。
+
+## 配置整理
+为了能够稳定的实现之前的三个需求，稳定的自动的项目下conda环境指定，在wsl中使用，以项目根目录为根能自由引用。同时应对目前存在的一些问题，无法稳定引用存在的文件，错误的引用旧文件。我使用新的架构，即将所有可导入代码放入src中，同时在一个文件夹下，此文件夹的名字为包的名字，而数据集，即使是软链接，或者文档等都在src外面。在外面我们通过pyproject.toml来配置，然后在wsl中打开相应环境用如下命令建立：
+```bash
+# 升级构建/安装工具（可选但推荐）
+python -m pip install -U pip setuptools
+
+# 可编辑安装（PEP 660）
+pip install -e .
+```
+此后所有可导入文件可以通过软件包名下引入，而外部的应以项目根目录为根结合Path使用，如下：
+```bash
+from pathlib import Path
+self.out_dir  = Path(out_dir).expanduser().resolve()
+```
+
+## LightningCLI
+利用LightningCLI我们可以更科学的管理超参数，路径等等。
+大部分我们需要的参数都已经在Lightning中规划好了位置，所以我们只要在yaml文件中按照格式一层层自CLI到Trainer等等，按照其缩进格式安排参数，就能够自动注入，然后就能方便，统一的管理参数。这是开始CLI的基本设置，给出CLI，并自动导入配置文件：
+重点给出L.LightningDataModule和L.LightningModule的两个子类。
+```python
+from lightning.pytorch.cli import LightningCLI
+
+def cli_main():
+    cli = LightningCLI(parser_kwargs={"default_config_files": ["configs/cg.yaml"]})
+
+if __name__ == "__main__":
+    cli_main()
+```

@@ -1,39 +1,20 @@
-# general config
-device: auto   # 可选值：auto、cuda、cpu
-experiment: 1
-load: 1
-save: 1
-batch_size: 16
-freq: 10
-train_subset_len: 20000                     
-val_subset_len: 1000                    
-subset_len: 1
-mode: 'train'
+model:
+  lr: 0.0002
+  lambda_cyc: 10
 
-# paths
-MONET_ROOT: 'data/monet2photo'
-monet_trainA: 'data/monet2photo/trainA'
-monet_trainB: 'data/monet2photo/trainB'
-monet_valA: 'data/monet2photo/valA'
-monet_valB: 'data/monet2photo/valB'
+data:
+  root: ./data/monet2photo
+  size: 256
+  batch_size: 1
 
-# constant values
-mean: [0.485, 0.456, 0.406]
-std: [0.229, 0.224, 0.225]
-
-# hypoparameters
-lr: 1e-4            # 学习率  
-momentum: 0.9          # 动量
-weight_decay: 0.0005  # 权重衰减
-epochs: 600          # 迭代次数  
-img_dim: 320
-pic_size: 320
-num_classes: 80
-step_size: 30
-gamma: 0.1
-
-# visualization config
-cv_mode: 'video'
-video_path: 'data/video/4.mp4'
-output_path: 'results/video/output_7.mp4'
-weight_path: 'weights/YOLOv3_0.pth'
+trainer:
+  max_epochs: 200
+  accelerator: gpu
+  devices: 1
+  precision: 16-mixed
+  callbacks:
+    - class_path: lightning.pytorch.callbacks.EarlyStopping
+      init_args: {monitor: val/fid, patience: 5}
+  logger:
+    class_path: lightning.pytorch.loggers.TensorBoardLogger
+    init_args: {save_dir: logs, name: cg}

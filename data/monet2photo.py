@@ -29,7 +29,7 @@ class Monet(Dataset):
         return self.tfm(a), self.tfm(b)
 
 class Monet2PhotoDM(L.LightningDataModule):
-    def __init__(self, data_dir: str="./CycleGAN/data/monet2photo",
+    def __init__(self, data_dir: str="data/monet2photo",
                  batch_size: int=1, size: int=256, num_workers: int=4):
         super().__init__()
         self.data_dir = Path(data_dir)
@@ -60,3 +60,27 @@ class Monet2PhotoDM(L.LightningDataModule):
         return DataLoader(self.test_set, batch_size=self.batch_size, shuffle=False,
                           num_workers=self.num_workers, pin_memory=True,
                           persistent_workers=self.num_workers>0)
+
+
+if __name__ == "__main__":
+    import torchvision.transforms as T
+    import torchvision.transforms.functional as TF
+    import matplotlib.pyplot as plt
+    class InverseNormalize(T.Normalize):
+        def __init__(self, mean, std):
+            inv_std = [1/s for s in std]
+            inv_mean = [-m/s for m,s in zip(mean, std)]
+            super().__init__(inv_mean, inv_std)
+
+    denorm_tfm = InverseNormalize((0.5,)*3, (0.5,)*3)
+    monet = Monet2PhotoDM(data_dir="data/monet2photo")
+    monet.setup(stage="fit")
+    loader = monet.train_dataloader()
+    for x, y in loader:
+        img = denorm_tfm(x[0]).permute(1,2,0).cpu().numpy()
+        plt.imshow(img)
+        plt.axis("off")
+        plt.show()
+        #pil = TF.to_pil_image(denorm_tfm(x[0].squeeze(0).cpu()))
+        #pil.show()
+        break

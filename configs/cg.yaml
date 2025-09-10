@@ -1,27 +1,81 @@
-model:
+fit: 
+  seed_everything: 42
+
+  #ckpt_path: "best"      # 等价于命令行 --ckpt_path=best
+  trainer:
+  ## test
+    #fast_dev_run: 5
+    #limit_train_batches: 0.1
+    #limit_val_batches: 0.01
+    num_sanity_val_steps: 2
+
+    profiler: 
+      class_path: lightning.pytorch.profilers.SimpleProfiler
+      init_args: { dirpath: logs/profilers, filename: perf_logs }
+    default_root_dir: logs/checkpoints
+    #ckpt_path: logs/checkpoints/
+    max_epochs: 200
+    accelerator: gpu
+    devices: 1
+    precision: 16-mixed
+    log_every_n_steps: 50
+    #deterministic: true
+    callbacks:
+      - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+        init_args: { monitor: val/Total_Loss, mode: min, save_top_k: 2, filename: "epoch{epoch}-valloss{val/loss:.3f}" }
+      - class_path: lightning.pytorch.callbacks.EarlyStopping
+        init_args: { monitor: val/Total_Loss, min_delta: 0.00, mode: min, patience: 10, check_finite: true }
+      - class_path: lightning.pytorch.callbacks.ModelSummary
+        init_args: { max_depth: 2 }
+      - class_path: lightning.pytorch.callbacks.DeviceStatsMonitor
+        init_args: {cpu_stats: true}
+    logger:
+      class_path: lightning.pytorch.loggers.TensorBoardLogger
+      init_args: { save_dir: logs, name: cg }
+
+  model:
+    #class_path: cg.CycleGAN.CycleGAN
+    #init_args:
+      # 1) 子网络
     G:
-      class_path: cg.models.Generator
+      class_path: cg.models.Generator.Generator
     F:
-      class_path: cg.models.Generator
+      class_path: cg.models.Generator.Generator
     Dx:
-      class_path: cg.models.Discriminator
+      class_path: cg.models.Discriminator.Discriminator
     Dy:
-      class_path: cg.models.Discriminator
+      class_path: cg.models.Discriminator.Discriminator
 
-data:
-  root: data/monet2photo
-  size: 256
-  batch_size: 1
+    # 2) 损失权重 & 训练超参
+    lambda_cyc: 10.0     # (= 你的 l1)
+    lambda_id: 5.0       # (= 你的 l2)
+    n_epochs: 100
+    n_epochs_decay: 100
 
-fit:
-    trainer:
-        max_epochs: 200
-        accelerator: gpu
-        devices: 1
-        precision: 16-mixed
-        callbacks:
-          - class_path: lightning.pytorch.callbacks.EarlyStopping
-            init_args: {monitor: val/fid, patience: 5}
-        logger:
-          class_path: lightning.pytorch.loggers.TensorBoardLogger
-          init_args: {save_dir: logs, name: cg}
+      # 3) 多优化器（依赖注入）
+
+      #opt_G:
+      #  class_path: torch.optim.Adam
+      #  init_args: { lr: 2.0e-4, betas: [0.5, 0.999] }
+      #opt_D:
+      #  class_path: torch.optim.Adam
+      #  init_args: { lr: 2.0e-4, betas: [0.5, 0.999] }
+
+      # 可选：调度器
+      # sch_G:
+      #   class_path: torch.optim.lr_scheduler.CosineAnnealingLR
+      #   init_args: { T_max: 200, eta_min: 1.0e-7 }
+      # sch_D: ...
+
+  data:
+    #class_path: cg.data.monet2photo.Monet2PhotoDM
+    #init_args:
+    data_dir: data/monet2photo      # 软链接也可
+    batch_size: 1
+    size: 256
+    num_workers: 4
+    seeds: 42
+
+
+
+

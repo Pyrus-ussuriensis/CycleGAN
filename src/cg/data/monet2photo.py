@@ -32,20 +32,21 @@ class Monet(Dataset):
         return self.tfm(a), self.tfm(b)
 
 class Monet2PhotoDM(L.LightningDataModule):
-    def __init__(self, data_dir="data/monet2photo", out_dir="results",
-                 batch_size: int=1, size: int=256, num_workers: int=4):
+    def __init__(self, data_dir="data/monet2photo",
+                 batch_size: int=1, size: int=256, num_workers: int=4, seeds=42):
         super().__init__()
         self.data_dir = Path(data_dir).expanduser().resolve()
-        self.out_dir  = Path(out_dir).expanduser().resolve()
+        #self.out_dir  = Path(out_dir).expanduser().resolve()
         self.batch_size = batch_size
         self.size = size
         self.num_workers = num_workers
+        self.seeds = seeds
         self.tfm = make_transform(size)
 
     def setup(self, stage: str | None = None):
         if stage in (None, "fit"):
             full = Monet(self.data_dir/"trainA", self.data_dir/"trainB", self.tfm)
-            g = torch.Generator().manual_seed(42)
+            g = torch.Generator().manual_seed(self.seeds)
             self.train_set, self.val_set = random_split(full, [0.95, 0.05], generator=g)
         if stage in (None, "test"):
             self.test_set = Monet(self.data_dir/"testA", self.data_dir/"testB", self.tfm)

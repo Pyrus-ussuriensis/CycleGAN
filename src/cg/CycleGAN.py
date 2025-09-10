@@ -5,18 +5,24 @@ import lightning as L
 import random
 
 class CycleGAN(L.LightningModule):
-    def __init__(self, Generator1:nn.Module, Generator2:nn.Module, Discriminator1:nn.Module, Discriminator2:nn.Module, 
-                  l1=10, l2=5, n_epochs=100, n_epochs_decay=100, lr=2e-4):
+    def __init__(self, G:nn.Module, F:nn.Module, Dx:nn.Module, Dy:nn.Module, 
+                  lambda_cyc=10, lambda_id=5, n_epochs=100, n_epochs_decay=100, lr=2e-4):
         super(CycleGAN, self).__init__()
-        self.G= Generator1
-        self.F= Generator2
-        self.Dx= Discriminator1
-        self.Dy= Discriminator2
-        self.l1 = float(l1) # lambda1 for Lcyc_GF
-        self.l2 = float(l2) # lambda2 for Lid
+        self.G= G #Generator1
+        self.F= F #Generator2
+        self.Dx= Dx #Discriminator1
+        self.Dy= Dy #Discriminator2
+        self.lambda_cyc = float(lambda_cyc) # lambda1 for Lcyc_GF
+        self.lambda_id = float(lambda_id) # lambda2 for Lid
         self.n_epochs = n_epochs
         self.n_epochs_decay = n_epochs_decay
         self.lr = lr
+        self.save_hyperparameters(ignore=["G", "F", "Dx", "Dy"])
+
+        #self.example_input_array = torch.Tensor(1, 3, 256, 256)
+
+        self.automatic_optimization = False
+
         self.fakes_m = []
         self.fakes_p = []
     
@@ -31,46 +37,60 @@ class CycleGAN(L.LightningModule):
             fakes[i] = fake
         return out
 
-    def training_step(self, batch, batch_idx, optimizer_idx):
+    def training_step(self, batch, batch_idx):
         m, p = batch
-        if optimizer_idx == 0:
+
+        optG, optD = self.optimizers()
+
+    #if optimizer_idx == 0:
+        fake_m = self.G(p)
+        fake_p = self.F(m)
+
+        out_Gy = self.Dy(fake_m)
+        out_Gx = self.Dx(fake_p)
+        #LGAN_GDXY = (out_Gy-1)^2 + (out_y-1)^2 + out_Gy^2
+        #LGAN_FDXY = (out_Gx-1)^2 + (out_x-1)^2 + out_Gx^2
+
+        LGAN_G = F.mse_loss(out_Gy, torch.ones_like(out_Gy))
+        LGAN_F = F.mse_loss(out_Gx, torch.ones_like(out_Gx))
+        LGAN_GF = LGAN_F + LGAN_G
+
+        Lcyc_GF = F.l1_loss(self.F(self.G(p)), p) + F.l1_loss(self.G(self.F(m)), m)
+        Lid = F.l1_loss(self.G(m), m) + F.l1_loss(self.F(p), p)
+        Total_Loss0 = LGAN_GF + self.lambda_cyc*Lcyc_GF + self.lambda_id*Lid
+        self.toggle_optimizer(optG);optG.zero_grad(); self.manual_backward(Total_Loss0); optG.step(); self.untoggle_optimizer(optG)
+
+        self.log_dict({"g/Total_Loss":Total_Loss0,"g/LGAN_GF":LGAN_GF, "g/Lcyc_GF":Lcyc_GF, "g/Lid":Lid}, prog_bar=True, on_step=True, on_epoch=True)
+        #return Total_Loss0
+    
+    #if optimizer_idx == 1:
+        with torch.no_grad():
             fake_m = self.G(p)
             fake_p = self.F(m)
+        fake_m = self.query(self.fakes_m, fake_m).detach()
+        fake_p = self.query(self.fakes_p, fake_p).detach()
 
-            out_Gy = self.Dy(fake_m)
-            out_Gx = self.Dx(fake_p)
-            #LGAN_GDXY = (out_Gy-1)^2 + (out_y-1)^2 + out_Gy^2
-            #LGAN_FDXY = (out_Gx-1)^2 + (out_x-1)^2 + out_Gx^2
-            LGAN_G = F.mse_loss(out_Gy, torch.ones_like(out_Gy))
-            LGAN_F = F.mse_loss(out_Gx, torch.ones_like(out_Gx))
-            LGAN_GF = LGAN_F + LGAN_G
+        out_Gy = self.Dy(fake_m)
+        out_Gx = self.Dx(fake_p)
+        out_y = self.Dy(m)
+        out_x = self.Dx(p)
+        #LGAN_GDXY = (out_Gy-1)^2 + (out_y-1)^2 + out_Gy^2
+        #LGAN_FDXY = (out_Gx-1)^2 + (out_x-1)^2 + out_Gx^2
+        LGAN_DX = F.mse_loss(out_y, torch.ones_like(out_y)) + F.mse_loss(out_Gy, torch.zeros_like(out_Gy))
+        LGAN_DY = F.mse_loss(out_x, torch.ones_like(out_x)) + F.mse_loss(out_Gx, torch.zeros_like(out_Gx))
+        LGAN_DXY = LGAN_DX + LGAN_DY
 
-            Lcyc_GF = F.l1_loss(self.F(self.G(p)), p) + F.l1_loss(self.G(self.F(m)), m)
-            Lid = F.l1_loss(self.G(m), m) + F.l1_loss(self.F(p), p)
-            Total_Loss = LGAN_GF + self.l1*Lcyc_GF + self.l2*Lid
-            self.log_dict({"g/Total_Loss":Total_Loss,"g/LGAN_GF":LGAN_GF, "g/Lcyc_GF":Lcyc_GF, "g/Lid":Lid}, prog_bar=True, on_step=True, on_epoch=True)
-            return Total_Loss
-        
-        if optimizer_idx == 1:
-            with torch.no_grad():
-                fake_m = self.G(p)
-                fake_p = self.F(m)
-            fake_m = self.query(self.fakes_m, fake_m).detach()
-            fake_p = self.query(self.fakes_p, fake_p).detach()
+        Total_Loss1 = LGAN_DXY/2
+        self.toggle_optimizer(optD); optD.zero_grad(); self.manual_backward(Total_Loss1); optD.step(); self.untoggle_optimizer(optD)
 
-            out_Gy = self.Dy(fake_m)
-            out_Gx = self.Dx(fake_p)
-            out_y = self.Dy(m)
-            out_x = self.Dx(p)
-            #LGAN_GDXY = (out_Gy-1)^2 + (out_y-1)^2 + out_Gy^2
-            #LGAN_FDXY = (out_Gx-1)^2 + (out_x-1)^2 + out_Gx^2
-            LGAN_DX = F.mse_loss(out_y, torch.ones_like(out_y)) + F.mse_loss(out_Gy, torch.zeros_like(out_Gy))
-            LGAN_DY = F.mse_loss(out_x, torch.ones_like(out_x)) + F.mse_loss(out_Gx, torch.zeros_like(out_Gx))
-            LGAN_DXY = LGAN_DX + LGAN_DY
+        self.log_dict({"d/Total_Loss":Total_Loss1,"d/LGAN_DX":LGAN_DX, "d/LGAN_DY":LGAN_DY}, prog_bar=True, on_step=True, on_epoch=True)
 
-            Total_Loss = LGAN_DXY/2
-            self.log_dict({"d/Total_Loss":Total_Loss,"d/LGAN_DX":LGAN_DX, "d/LGAN_DY":LGAN_DY}, prog_bar=True, on_step=True, on_epoch=True)
-            return Total_Loss
+
+        #return Total_Loss1
+    def on_train_epoch_end(self):
+        schG, schD = self.lr_schedulers()
+        schG.step(); schD.step()
+
 
     def _shared_eval_step(self, batch, batch_idx, state):
         m, p = batch
@@ -93,7 +113,7 @@ class CycleGAN(L.LightningModule):
 
         Lcyc_GF = F.l1_loss(self.F(self.G(p)), p) + F.l1_loss(self.G(self.F(m)), m)
         Lid = F.l1_loss(self.G(m), m) + F.l1_loss(self.F(p), p)
-        Total_Loss = LGAN_GF + LGAN_DXY + self.l1*Lcyc_GF + self.l2*Lid
+        Total_Loss = LGAN_GF + LGAN_DXY + self.lambda_cyc*Lcyc_GF + self.lambda_id*Lid
         self.log_dict({f"{state}/Total_Loss":Total_Loss, f"{state}/LGAN_GF":LGAN_GF, f"{state}/LGAN_DXY":LGAN_DXY, 
                         f"{state}/Lcyc_GF":Lcyc_GF, f"{state}/Lid":Lid}, prog_bar=True, on_epoch=True)
         return Total_Loss

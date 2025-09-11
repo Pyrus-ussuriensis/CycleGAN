@@ -2,18 +2,18 @@ fit:
   seed_everything: 42
 
   #ckpt_path: "best"      # 等价于命令行 --ckpt_path=best
+  ckpt_path: logs/cg/version_10/checkpoints/last.ckpt
   trainer:
   ## test
     #fast_dev_run: 5
-    #limit_train_batches: 0.1
-    #limit_val_batches: 0.01
-    num_sanity_val_steps: 2
+    limit_train_batches: 0.25
+    limit_val_batches: 0.05
+    #num_sanity_val_steps: 2
 
     profiler: 
       class_path: lightning.pytorch.profilers.SimpleProfiler
       init_args: { dirpath: logs/profilers, filename: perf_logs }
     default_root_dir: logs/checkpoints
-    #ckpt_path: logs/checkpoints/
     max_epochs: 200
     accelerator: gpu
     devices: 1
@@ -22,13 +22,20 @@ fit:
     #deterministic: true
     callbacks:
       - class_path: lightning.pytorch.callbacks.ModelCheckpoint
-        init_args: { monitor: val/Total_Loss, mode: min, save_top_k: 2, filename: "epoch{epoch}-valloss{val/loss:.3f}" }
-      - class_path: lightning.pytorch.callbacks.EarlyStopping
-        init_args: { monitor: val/Total_Loss, min_delta: 0.00, mode: min, patience: 10, check_finite: true }
+        init_args: { monitor: val_Total_Loss, mode: min, save_top_k: 3, auto_insert_metric_name: false, save_last: true, filename: "e{epoch:03d}-s{step}-val{val_total_loss:.4f}" }
+      #- class_path: lightning.pytorch.callbacks.EarlyStopping
+      #  init_args: { monitor: val_Total_Loss, min_delta: 0.00, mode: min, patience: 10, check_finite: true }
       - class_path: lightning.pytorch.callbacks.ModelSummary
         init_args: { max_depth: 2 }
       - class_path: lightning.pytorch.callbacks.DeviceStatsMonitor
         init_args: {cpu_stats: true}
+      - class_path: cg.callbacks.saver.SampleSaver
+        init_args:
+          every_n_steps: 100
+          out_dir: /mnt/d/Projects/CycleGAN/results/pictures
+          #g_attr: "G"
+          #f_attr: "F"
+          use_logger: true
     logger:
       class_path: lightning.pytorch.loggers.TensorBoardLogger
       init_args: { save_dir: logs, name: cg }
@@ -72,7 +79,8 @@ fit:
     #init_args:
     data_dir: data/monet2photo      # 软链接也可
     batch_size: 1
-    size: 256
+    size: 128
+    resize: 143
     num_workers: 4
     seeds: 42
 

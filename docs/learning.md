@@ -119,6 +119,7 @@ lightning会自动将数据转移到正确的设备，除非是自定义的数�
 
 ## LightningModule
 在优化器方面其提供了使用多个优化器以及调度器的方法，对每个运行一遍流程，我们可以用optimizer_idx来区别。
+新版本已经不支持这个了，其推荐手动更新。
 
 ## 配置整理
 为了能够稳定的实现之前的三个需求，稳定的自动的项目下conda环境指定，在wsl中使用，以项目根目录为根能自由引用。同时应对目前存在的一些问题，无法稳定引用存在的文件，错误的引用旧文件。我使用新的架构，即将所有可导入代码放入src中，同时在一个文件夹下，此文件夹的名字为包的名字，而数据集，即使是软链接，或者文档等都在src外面。在外面我们通过pyproject.toml来配置，然后在wsl中打开相应环境用如下命令建立：
@@ -148,4 +149,87 @@ def cli_main():
 if __name__ == "__main__":
     cli_main()
 ```
+
+## 琐碎处理
+绝大多数琐碎的工具都可以通过写在yaml中直接注入来调用很方便
+```yaml
+fit: 
+  seed_everything: 42 # 所有lightning中的随机器或什么的种子，增强可复现性。
+
+  #ckpt_path: "best"      # 等价于命令行 --ckpt_path=best
+  #ckpt_path: logs/checkpoints/ # 需要恢复的记录
+  trainer:
+  ## test
+    #fast_dev_run: 5 # 快速测试几个batch
+    limit_train_batches: 0.25 # 每次训练随机取用数据集的比例，下面是验证集的
+    limit_val_batches: 0.05
+    #num_sanity_val_steps: 2 # 训练前测试
+
+    profiler: # 关于时间的报告
+      class_path: lightning.pytorch.profilers.SimpleProfiler
+      init_args: { dirpath: logs/profilers, filename: perf_logs }
+    default_root_dir: logs/checkpoints # 所有状态存储的地方
+    max_epochs: 200 # 最大数量
+    accelerator: gpu 
+    devices: 1
+    precision: 16-mixed # 调整精度使得能够更快
+    log_every_n_steps: 50 # 每batch输入
+    #deterministic: true # 确定性的，可复现，但会引发一些由于不确定导致的问题
+    callbacks:
+      - class_path: lightning.pytorch.callbacks.ModelCheckpoint # 监视，确定什么时候保存完整的checkpoint
+        init_args: { monitor: val/Total_Loss, mode: min, save_top_k: 2, filename: "epoch{epoch}-valloss{val/loss:.3f}" }
+      - class_path: lightning.pytorch.callbacks.EarlyStopping # 早停原则设置
+        init_args: { monitor: val/Total_Loss, min_delta: 0.00, mode: min, patience: 10, check_finite: true }
+      - class_path: lightning.pytorch.callbacks.ModelSummary # 模型报告的显示，多少层
+        init_args: { max_depth: 2 }
+      - class_path: lightning.pytorch.callbacks.DeviceStatsMonitor # GPU等的使用情况的监视
+        init_args: {cpu_stats: true}
+    logger:
+      class_path: lightning.pytorch.loggers.TensorBoardLogger 
+      init_args: { save_dir: logs, name: cg }
+
+  model:
+    # 多模型的给出，作为LightningModule的参数，还有其他参数
+    G:
+      class_path: cg.models.Generator.Generator
+    F:
+      class_path: cg.models.Generator.Generator
+    Dx:
+      class_path: cg.models.Discriminator.Discriminator
+    Dy:
+      class_path: cg.models.Discriminator.Discriminator
+
+    # 2) 损失权重 & 训练超参
+    lambda_cyc: 10.0     # (= 你的 l1)
+    lambda_id: 5.0       # (= 你的 l2)
+    n_epochs: 100
+    n_epochs_decay: 100
+
+      # 3) 多优化器（依赖注入）
+
+      #opt_G:
+      #  class_path: torch.optim.Adam
+      #  init_args: { lr: 2.0e-4, betas: [0.5, 0.999] }
+      #opt_D:
+      #  class_path: torch.optim.Adam
+      #  init_args: { lr: 2.0e-4, betas: [0.5, 0.999] }
+
+      # 可选：调度器
+      # sch_G:
+      #   class_path: torch.optim.lr_scheduler.CosineAnnealingLR
+      #   init_args: { T_max: 200, eta_min: 1.0e-7 }
+      # sch_D: ...
+
+  data:
+    #class_path: cg.data.monet2photo.Monet2PhotoDM
+    #init_args:
+    data_dir: data/monet2photo 
+    batch_size: 1
+    size: 128
+    resize: 143
+    num_workers: 4
+    seeds: 42
+```
+
+
 

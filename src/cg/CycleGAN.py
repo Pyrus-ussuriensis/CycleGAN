@@ -114,8 +114,8 @@ class CycleGAN(L.LightningModule):
         Lcyc_GF = F.l1_loss(self.F(self.G(p)), p) + F.l1_loss(self.G(self.F(m)), m)
         Lid = F.l1_loss(self.G(m), m) + F.l1_loss(self.F(p), p)
         Total_Loss = LGAN_GF + LGAN_DXY + self.lambda_cyc*Lcyc_GF + self.lambda_id*Lid
-        self.log_dict({f"{state}/Total_Loss":Total_Loss, f"{state}/LGAN_GF":LGAN_GF, f"{state}/LGAN_DXY":LGAN_DXY, 
-                        f"{state}/Lcyc_GF":Lcyc_GF, f"{state}/Lid":Lid}, prog_bar=True, on_epoch=True)
+        self.log_dict({f"{state}_Total_Loss":Total_Loss, f"{state}_LGAN_GF":LGAN_GF, f"{state}_LGAN_DXY":LGAN_DXY, 
+                        f"{state}_Lcyc_GF":Lcyc_GF, f"{state}_Lid":Lid}, prog_bar=True, on_epoch=True)
         return Total_Loss
 
 

@@ -1,0 +1,10 @@
+weights/       
+logs/           
+tensorboard/    
+results/        
+__pycache__/    
+*.pyc          
+.vscode/       
+.env          
+reference/
+models/backbone_g/model_best.pth.tar

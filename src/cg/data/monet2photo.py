@@ -9,9 +9,9 @@ from pathlib import Path
 
 
 
-def make_transform(size=256):
+def make_transform(size=256, resize=286):
     return transforms.Compose([
-        transforms.Resize(286),
+        transforms.Resize(resize),
         transforms.RandomCrop(size),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
@@ -33,15 +33,16 @@ class Monet(Dataset):
 
 class Monet2PhotoDM(L.LightningDataModule):
     def __init__(self, data_dir="data/monet2photo",
-                 batch_size: int=1, size: int=256, num_workers: int=4, seeds=42):
+                 batch_size: int=1, size: int=256, resize: int=286, num_workers: int=4, seeds=42):
         super().__init__()
         self.data_dir = Path(data_dir).expanduser().resolve()
         #self.out_dir  = Path(out_dir).expanduser().resolve()
         self.batch_size = batch_size
         self.size = size
+        self.resize = resize
         self.num_workers = num_workers
         self.seeds = seeds
-        self.tfm = make_transform(size)
+        self.tfm = make_transform(size, resize)
 
     def setup(self, stage: str | None = None):
         if stage in (None, "fit"):

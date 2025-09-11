@@ -44,7 +44,7 @@ class Generator(nn.Module):
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=7, stride=1, padding=0, bias=True)
         self.conv2 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=2, padding=1)
         self.conv3 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=2, padding=1)
-        self.resnetblocks = nn.Sequential(*(ResNetBlock(in_channels=256) for _ in range(9)))
+        self.resnetblocks = nn.Sequential(*(ResNetBlock(in_channels=256) for _ in range(6)))
         self.convtrans1 = nn.ConvTranspose2d(in_channels=256, out_channels=128, kernel_size=3, stride=2, padding=1, output_padding=1, bias=True)
         self.convtrans2 = nn.ConvTranspose2d(in_channels=128, out_channels=64, kernel_size=3, stride=2, padding=1, output_padding=1, bias=True)
         self.padding2 = nn.ReflectionPad2d(3)

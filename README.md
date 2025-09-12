@@ -9,6 +9,8 @@
 ### environment
 环境配置
 ```bash
+# 安装 PyTorch（按官网选择你机器的 CUDA 版本）
+# https://pytorch.org/get-started/locally/
 conda env create -f docs/environment.yml -n cg
 conda activate cg
 pip install -r docs/requirements.txt
@@ -25,7 +27,7 @@ pip install -e .
 ```bash
 python src/cg/main.py fit --config configs/cg_fit.yaml
 ```
-训练出来的checkpoints会保存在log/cg中，
+训练出来的checkpoints会保存在logs/cg中，
 ### predict
 预测前修改cg_predict.yaml中的视频输入路径，同时先用utils中的vidinfo.py查看输入视频的参数进行修改。
 因为过去Johnson的快速风格迁移和这个生成网络差不多，同时当时效果不错，我习惯于直接正向传播而不做缩小和放大的调整。但如果卡的性能不够，不要给分辨率太高的视频，会很慢。

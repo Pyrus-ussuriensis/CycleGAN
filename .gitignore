@@ -7,4 +7,5 @@ __pycache__/
 .vscode/       
 .env          
 reference/
-models/backbone_g/model_best.pth.tar
+data/
+lightning_logs/

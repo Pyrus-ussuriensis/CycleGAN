@@ -1,5 +1,5 @@
 import cv2, sys, json
-p = "data/videos/building.mp4" # 给出需要处理的视频路径
+p = "data/videos/mountain01.mp4" # 给出需要处理的视频路径
 cap = cv2.VideoCapture(p)
 assert cap.isOpened(), f"Open failed: {p}"
 

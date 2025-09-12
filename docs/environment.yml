@@ -1,0 +1,14 @@
+name: cv-pytorch
+channels:
+  - https://repo.anaconda.com/pkgs/main
+  - https://repo.anaconda.com/pkgs/r
+dependencies:
+  - jupyterlab
+  - notebook
+  - python=3.10
+  - opencv
+  - albumentations
+  - conda-forge::tensorboard
+  - matplotlib
+  - lightning
+prefix: /home/larry/miniconda3/envs/cv-pytorch

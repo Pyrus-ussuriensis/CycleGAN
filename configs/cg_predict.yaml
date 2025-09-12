@@ -1,11 +1,12 @@
 ckpt_path: logs/cg/version_12/checkpoints/last.ckpt
 trainer:
+  logger: false
   accelerator: gpu
   devices: 1
   precision: 16-mixed
   callbacks:
     - class_path: cg.callbacks.video_writer.VideoWriterCallback
-      init_args: { out_path: results/videos/tree0.mp4, fps: 30.0, size: [640, 360], codec: "mp4v" }
+      init_args: { out_path: results/videos/tree0.mp4, fps: 30.0, size: [640, 360], codec: "mp4v" } # 结果输出的路径，同时先用src/cg/utils/vidinfo.py查看视频信息，设置size和fps
 model:
   G:
     class_path: cg.models.Generator.Generator
@@ -19,7 +20,7 @@ model:
 data:
   class_path: cg.data.video.VideoDM
   init_args:
-    path: data/videos/tree0.mp4
+    path: data/videos/tree0.mp4 # 读取需要处理的视频的路径
     batch_frames: 16
     num_workers: 0
 

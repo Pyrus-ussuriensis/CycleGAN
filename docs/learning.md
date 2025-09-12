@@ -199,13 +199,10 @@ fit:
     Dy:
       class_path: cg.models.Discriminator.Discriminator
 
-    # 2) 损失权重 & 训练超参
-    lambda_cyc: 10.0     # (= 你的 l1)
-    lambda_id: 5.0       # (= 你的 l2)
+    lambda_cyc: 10.0    
+    lambda_id: 5.0     
     n_epochs: 100
     n_epochs_decay: 100
-
-      # 3) 多优化器（依赖注入）
 
       #opt_G:
       #  class_path: torch.optim.Adam
@@ -214,7 +211,6 @@ fit:
       #  class_path: torch.optim.Adam
       #  init_args: { lr: 2.0e-4, betas: [0.5, 0.999] }
 
-      # 可选：调度器
       # sch_G:
       #   class_path: torch.optim.lr_scheduler.CosineAnnealingLR
       #   init_args: { T_max: 200, eta_min: 1.0e-7 }

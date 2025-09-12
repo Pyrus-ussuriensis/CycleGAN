@@ -32,7 +32,6 @@ class VideoWriterCallback(BasePredictionWriter):
 
         Wt,Ht = self.size
         for f in frames:
-            # 现在 predict_step 已保证原 H,W；这里不再 resize，只转 BGR
             self._writer.write(cv2.cvtColor(f, cv2.COLOR_RGB2BGR))
 
     def on_predict_epoch_end(self, trainer, pl_module):

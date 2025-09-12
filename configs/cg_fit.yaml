@@ -4,7 +4,7 @@ fit:
   #ckpt_path: "best"      # 等价于命令行 --ckpt_path=best
   ckpt_path: logs/cg/version_10/checkpoints/last.ckpt
   trainer:
-  ## test
+    ## test
     #fast_dev_run: 5
     limit_train_batches: 0.25
     limit_val_batches: 0.05
@@ -75,15 +75,14 @@ fit:
       # sch_D: ...
 
   data:
-    #class_path: cg.data.monet2photo.Monet2PhotoDM
-    #init_args:
-    data_dir: data/monet2photo      # 软链接也可
-    batch_size: 1
-    size: 128
-    resize: 143
-    num_workers: 4
-    seeds: 42
-
+    class_path: cg.data.monet2photo.Monet2PhotoDM
+    init_args:
+      data_dir: data/monet2photo      # 软链接也可
+      batch_size: 1
+      size: 128
+      resize: 143
+      num_workers: 4
+      seeds: 42
 
 
 

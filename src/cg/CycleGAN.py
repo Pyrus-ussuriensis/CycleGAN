@@ -4,6 +4,23 @@ import torch.nn as nn
 import lightning as L
 import random
 
+
+def _pad_to_multiple_of(x, m=4):  # x: [N,C,H,W]
+    H, W = x.shape[-2], x.shape[-1]
+    pad_h = (m - H % m) % m
+    pad_w = (m - W % m) % m
+    # F.pad 顺序: (w_right, w_left, h_bottom, h_top)
+    x_pad = F.pad(x, (0, pad_w, 0, pad_h), mode="reflect") if (pad_h or pad_w) else x
+    return x_pad, pad_h, pad_w
+
+def _unpad(x, pad_h, pad_w):      # x: [N,C,H',W']
+    if pad_h or pad_w:
+        H, W = x.shape[-2], x.shape[-1]
+        x = x[..., :H-pad_h, :W-pad_w]
+    return x
+
+
+
 class CycleGAN(L.LightningModule):
     def __init__(self, G:nn.Module, F:nn.Module, Dx:nn.Module, Dy:nn.Module, 
                   lambda_cyc=10, lambda_id=5, n_epochs=100, n_epochs_decay=100, lr=2e-4):
@@ -124,7 +141,30 @@ class CycleGAN(L.LightningModule):
 
     def test_step(self, batch, batch_idx):
         return self._shared_eval_step(batch=batch, batch_idx=batch_idx, state="test")
+    
+    @torch.inference_mode()
+    def predict_step(self, batch, batch_idx, dataloader_idx=0, direction="A2B"):
+        G = self.G if direction == "A2B" else self.F
 
+        # 统一成 [N,C,H,W]
+        if isinstance(batch, (list, tuple)):
+            batch = batch[0]
+        x = batch.to(self.device)
+        if x.dim() == 3:                    # [C,H,W] -> [1,C,H,W]
+            x = x.unsqueeze(0)
+        elif x.dim() == 5:                  # [B,T,C,H,W] -> [B*T,C,H,W]
+            B,T,C,H,W = x.shape
+            x = x.view(B*T, C, H, W)
+        elif x.dim() != 4:
+            raise ValueError(f"Unexpected predict batch shape: {tuple(x.shape)}")
+
+        # 可选：pad 到 4 的倍数，避免转置卷积边缘对齐问题
+        x_pad, ph, pw = _pad_to_multiple_of(x, m=4)
+
+        y = G(x_pad)                        # [N,C,H',W']
+        y = _unpad(y, ph, pw)               # 回到原 H,W
+        y = (y.clamp(-1,1) + 1) * 127.5     # [-1,1] → [0,255]
+        return y.byte().cpu()               # [N,C,H,W]
 
     def configure_optimizers(self):
         opt_G = torch.optim.Adam(list(self.G.parameters())+list(self.F.parameters()), lr=self.lr, betas=(0.5, 0.999)) 

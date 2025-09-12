@@ -1,0 +1,28 @@
+ckpt_path: logs/cg/version_12/checkpoints/last.ckpt
+trainer:
+  accelerator: gpu
+  devices: 1
+  precision: 16-mixed
+  callbacks:
+    - class_path: cg.callbacks.video_writer.VideoWriterCallback
+      init_args: { out_path: results/videos/tree0.mp4, fps: 30.0, size: [640, 360], codec: "mp4v" }
+model:
+  G:
+    class_path: cg.models.Generator.Generator
+  F:
+    class_path: cg.models.Generator.Generator
+  Dx:
+    class_path: cg.models.Discriminator.Discriminator
+  Dy:
+    class_path: cg.models.Discriminator.Discriminator
+
+data:
+  class_path: cg.data.video.VideoDM
+  init_args:
+    path: data/videos/tree0.mp4
+    batch_frames: 16
+    num_workers: 0
+
+
+
+

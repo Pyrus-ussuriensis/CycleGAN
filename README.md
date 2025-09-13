@@ -1,4 +1,8 @@
 # CycleGAN
+## Update 
+### 2025.9.13
+我猜想可能是因为莫奈的风格更加平淡，而使用梵高的风格会更加强烈，所以昨天我开始对梵高数据集vangogh2photo的训练，效果还可以。参数仍然是128 &times; 128, 6层残差，200epochs。这是视频截图。
+![alt text](docs/image1.png)
 ## Introduction
 这是一个对CycleGAN的复现，一方面用于对于GAN系列的学习，另一方面学习使用Lightning。开始综合手头资源和兴趣考虑选择了CycleGAN，但最终仍然受限于资源没有得到满意的结果。
 由于使用LightningCLI，我可以更方便的管理所有参数，并统一注入，实现了比原本利用字典记录yaml中内容然后各处读取更规范的方式，同时可以方便灵活的使用各种Lightning提供的工具。

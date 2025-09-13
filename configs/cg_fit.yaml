@@ -1,82 +1,81 @@
-fit: 
-  seed_everything: 42
+seed_everything: 42
 
-  #ckpt_path: "best"      # 等价于命令行 --ckpt_path=best
-  ckpt_path: logs/cg/version_10/checkpoints/last.ckpt
-  trainer:
-    ## test
-    #fast_dev_run: 5
-    limit_train_batches: 0.25
-    limit_val_batches: 0.05
-    #num_sanity_val_steps: 2
+#ckpt_path: "best"      # 等价于命令行 --ckpt_path=best
+ckpt_path: logs/cg_vangogh/version_3/checkpoints/last.ckpt
+trainer:
+  ## test
+  #fast_dev_run: 5
+  limit_train_batches: 0.25
+  limit_val_batches: 0.05
+  #num_sanity_val_steps: 2
 
-    profiler: 
-      class_path: lightning.pytorch.profilers.SimpleProfiler
-      init_args: { dirpath: logs/profilers, filename: perf_logs }
-    default_root_dir: logs/checkpoints
-    max_epochs: 200
-    accelerator: gpu
-    devices: 1
-    precision: 16-mixed
-    log_every_n_steps: 50
-    #deterministic: true
-    callbacks:
-      - class_path: lightning.pytorch.callbacks.ModelCheckpoint
-        init_args: { monitor: val_Total_Loss, mode: min, save_top_k: 3, auto_insert_metric_name: false, save_last: true, filename: "e{epoch:03d}-s{step}-val{val_total_loss:.4f}" }
-      #- class_path: lightning.pytorch.callbacks.EarlyStopping
-      #  init_args: { monitor: val_Total_Loss, min_delta: 0.00, mode: min, patience: 10, check_finite: true }
-      - class_path: lightning.pytorch.callbacks.ModelSummary
-        init_args: { max_depth: 2 }
-      - class_path: lightning.pytorch.callbacks.DeviceStatsMonitor
-        init_args: {cpu_stats: true}
-      - class_path: cg.callbacks.saver.SampleSaver
-        init_args:
-          every_n_steps: 100
-          out_dir: /mnt/d/Projects/CycleGAN/results/pictures
-          #g_attr: "G"
-          #f_attr: "F"
-          use_logger: true
-    logger:
-      class_path: lightning.pytorch.loggers.TensorBoardLogger
-      init_args: { save_dir: logs, name: cg }
+  profiler: 
+    class_path: lightning.pytorch.profilers.SimpleProfiler
+    init_args: { dirpath: logs/profilers, filename: perf_logs }
+  #default_root_dir: logs/checkpoints
+  max_epochs: 200
+  accelerator: gpu
+  devices: 1
+  precision: 16-mixed
+  log_every_n_steps: 50
+  #deterministic: true
+  callbacks:
+    - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+      init_args: { monitor: val_Total_Loss, mode: min, save_top_k: 3, auto_insert_metric_name: false, save_last: true, filename: "e{epoch:03d}-s{step}-val{val_total_loss:.4f}" }
+    #- class_path: lightning.pytorch.callbacks.EarlyStopping
+    #  init_args: { monitor: val_Total_Loss, min_delta: 0.00, mode: min, patience: 10, check_finite: true }
+    - class_path: lightning.pytorch.callbacks.ModelSummary
+      init_args: { max_depth: 2 }
+    - class_path: lightning.pytorch.callbacks.DeviceStatsMonitor
+      init_args: {cpu_stats: true}
+    - class_path: cg.callbacks.saver.SampleSaver
+      init_args:
+        every_n_steps: 500
+        out_dir: /mnt/d/Projects/CycleGAN/results/pictures
+        #g_attr: "G"
+        #f_attr: "F"
+        use_logger: true
+  logger:
+    class_path: lightning.pytorch.loggers.TensorBoardLogger
+    init_args: { save_dir: logs, name: cg_vangogh } # 状态保存地点
 
-  model:
-    #class_path: cg.CycleGAN.CycleGAN
-    #init_args:
-    G:
-      class_path: cg.models.Generator.Generator
-    F:
-      class_path: cg.models.Generator.Generator
-    Dx:
-      class_path: cg.models.Discriminator.Discriminator
-    Dy:
-      class_path: cg.models.Discriminator.Discriminator
+model:
+  #class_path: cg.CycleGAN.CycleGAN
+  #init_args:
+  G:
+    class_path: cg.models.Generator.Generator
+  F:
+    class_path: cg.models.Generator.Generator
+  Dx:
+    class_path: cg.models.Discriminator.Discriminator
+  Dy:
+    class_path: cg.models.Discriminator.Discriminator
 
-    lambda_cyc: 10.0  
-    lambda_id: 5.0    
-    n_epochs: 100
-    n_epochs_decay: 100
-    #opt_G:
-    #  class_path: torch.optim.Adam
-    #  init_args: { lr: 2.0e-4, betas: [0.5, 0.999] }
-    #opt_D:
-    #  class_path: torch.optim.Adam
-    #  init_args: { lr: 2.0e-4, betas: [0.5, 0.999] }
+  lambda_cyc: 10.0  
+  lambda_id: 1.0 #5.0    
+  n_epochs: 100
+  n_epochs_decay: 100
+  #opt_G:
+  #  class_path: torch.optim.Adam
+  #  init_args: { lr: 2.0e-4, betas: [0.5, 0.999] }
+  #opt_D:
+  #  class_path: torch.optim.Adam
+  #  init_args: { lr: 2.0e-4, betas: [0.5, 0.999] }
 
-    # sch_G:
-    #   class_path: torch.optim.lr_scheduler.CosineAnnealingLR
-    #   init_args: { T_max: 200, eta_min: 1.0e-7 }
-    # sch_D: ...
+  # sch_G:
+  #   class_path: torch.optim.lr_scheduler.CosineAnnealingLR
+  #   init_args: { T_max: 200, eta_min: 1.0e-7 }
+  # sch_D: ...
 
-  data:
-    class_path: cg.data.monet2photo.Monet2PhotoDM
-    init_args:
-      data_dir: data/monet2photo      # 软链接也可
-      batch_size: 1
-      size: 128
-      resize: 143
-      num_workers: 4
-      seeds: 42
+data:
+  class_path: cg.data.monet2photo.Monet2PhotoDM
+  init_args:
+    data_dir: data/vangogh2photo # 软链接也可
+    batch_size: 1
+    size: 128
+    resize: 143
+    num_workers: 4
+    seeds: 42
 
 
 
